@@ -1,0 +1,52 @@
+id: strict
+name: "High-Security Policy"
+description: "Deny-first: require approval for first-seen tools, block destructive tools."
+mode: enforce
+default_decision: deny
+
+rules:
+  - id: strict-allow-known-safe-tools
+    name: "Allow-list known safe tool names"
+    description: "Permit a curated set of safe tools to call without approval."
+    enabled: true
+    priority: 1
+    scope:
+      methods: [tools/call]
+      directions: [inbound]
+    conditions:
+      - field: "tool.name"
+        op: in
+        value: ["read_file", "list_directory", "search", "get_weather"]
+    action:
+      decision: allow
+    severity: info
+    tags: [allowlist]
+
+  - id: strict-block-injection
+    name: "Block all injection phrases in tool descriptions"
+    enabled: true
+    priority: 5
+    scope:
+      methods: [tools/list]
+      directions: [outbound]
+    conditions:
+      - field: "tool.description"
+        op: phrase_match
+        value: suspicious_tool_phrases
+    action:
+      decision: hide
+    severity: critical
+    tags: [prompt-injection]
+
+  - id: strict-require-approval-all-calls
+    name: "Require approval for all tool calls not in allowlist"
+    description: "In strict mode, all non-explicitly-allowed tool calls require HITL."
+    enabled: false  # enable when ready for full HITL enforcement
+    priority: 100
+    scope:
+      methods: [tools/call]
+      directions: [inbound]
+    action:
+      decision: require_approval
+    severity: medium
+    tags: [hitl]

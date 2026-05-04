@@ -1,0 +1,33 @@
+# syntax=docker/dockerfile:1
+# The eBPF sensor requires a Linux build environment and CAP_BPF at runtime.
+FROM golang:1.23-alpine AS builder
+
+RUN apk add --no-cache linux-headers clang llvm libbpf-dev
+
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go mod download
+COPY internal/ ./internal/
+COPY pkg/ ./pkg/
+COPY cmd/sensor-ebpf/ ./cmd/sensor-ebpf/
+COPY deploy/bpf/ ./deploy/bpf/
+
+RUN mkdir -p /opt/mcpids/bpf && \
+    clang -O2 -g -target bpf \
+      -I/usr/include \
+      -c deploy/bpf/mcpids_trace.bpf.c \
+      -o /opt/mcpids/bpf/mcpids_trace.bpf.o
+
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg/mod \
+    CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" \
+    -o /bin/sensor-ebpf ./cmd/sensor-ebpf
+
+# Runtime: needs minimal libc for eBPF syscalls
+FROM debian:bookworm-slim
+COPY --from=builder /bin/sensor-ebpf /sensor-ebpf
+COPY --from=builder /opt/mcpids/bpf /opt/mcpids/bpf
+# eBPF requires privileged mode or at minimum CAP_BPF + CAP_NET_ADMIN
+# Add these in your pod security context or docker run --cap-add=BPF
+ENTRYPOINT ["/sensor-ebpf"]

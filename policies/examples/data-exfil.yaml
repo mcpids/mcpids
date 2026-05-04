@@ -1,0 +1,22 @@
+id: data-exfil-protection
+name: "Data Exfiltration Protection"
+description: "Quarantine sessions where exfiltration chains are detected."
+mode: enforce
+default_decision: allow
+
+rules:
+  - id: deny-exfil-description
+    name: "Deny tools with explicit exfiltration instructions in description"
+    enabled: true
+    priority: 10
+    scope:
+      methods: [tools/list]
+      directions: [outbound]
+    conditions:
+      - field: "tool.description"
+        op: phrase_match
+        value: exfiltration_phrases
+    action:
+      decision: deny
+    severity: critical
+    tags: [exfiltration, tool-poisoning]

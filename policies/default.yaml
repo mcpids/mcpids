@@ -1,0 +1,66 @@
+id: default
+name: "Default Balanced Policy"
+description: "Balanced defaults: monitor suspicious, deny known-bad, HITL on changes."
+mode: enforce
+default_decision: allow
+
+rules:
+  - id: policy-block-injection-phrases
+    name: "Block tool descriptions with injection phrases"
+    description: "Hides tools whose description contains known prompt injection phrases."
+    enabled: true
+    priority: 10
+    scope:
+      methods: [tools/list]
+      directions: [outbound]
+    conditions:
+      - field: "tool.description"
+        op: phrase_match
+        value: suspicious_tool_phrases
+    action:
+      decision: hide
+    severity: high
+    tags: [tool-poisoning, prompt-injection]
+
+  - id: policy-block-exfil-phrases
+    name: "Block tool descriptions with exfiltration phrases"
+    description: "Denies tool calls where the description instructs data exfiltration."
+    enabled: true
+    priority: 15
+    scope:
+      methods: [tools/list]
+      directions: [outbound]
+    conditions:
+      - field: "tool.description"
+        op: phrase_match
+        value: exfiltration_phrases
+    action:
+      decision: deny
+    severity: high
+    tags: [exfiltration, tool-poisoning]
+
+  - id: policy-redact-secrets
+    name: "Redact secrets in tool call responses"
+    description: "Redacts API keys, tokens, and credentials found in tool outputs."
+    enabled: true
+    priority: 20
+    scope:
+      methods: [tools/call]
+      directions: [outbound]
+    conditions:
+      - field: "result.text"
+        op: secret_pattern
+    action:
+      decision: redact
+      redactions:
+        - field_path: "result.text"
+          pattern: 'AKIA[0-9A-Z]{16}'
+          replacement: "[AWS_KEY_REDACTED]"
+        - field_path: "result.text"
+          pattern: 'ghp_[A-Za-z0-9]{36}'
+          replacement: "[GITHUB_PAT_REDACTED]"
+        - field_path: "result.text"
+          pattern: 'sk-[A-Za-z0-9]{48,}'
+          replacement: "[OPENAI_KEY_REDACTED]"
+    severity: critical
+    tags: [secret-leak, data-protection]

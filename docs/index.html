@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MCPIDS | Secure AI Tool Ecosystems</title>
+  <meta name="description"
+    content="MCPIDS is an open-source inline security layer for MCP servers. Inspect MCP traffic, detect prompt injection and secret leaks, and enforce policy on dangerous tool behavior in real time." />
+  <meta name="theme-color" content="#020617" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap"
+    rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+    rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: "#f97316",
+            "primary-container": "#fb923c",
+            "on-primary": "#ffffff",
+            background: "#020617",
+            surface: "#020617",
+            "surface-bright": "#0f172a",
+            "surface-container-low": "#0f172a",
+            "surface-container": "#1e293b",
+            "surface-container-high": "#334155",
+            "surface-container-highest": "#475569",
+            "on-surface": "#f1f5f9",
+            "on-surface-variant": "#94a3b8",
+            outline: "#475569",
+            "outline-variant": "#1e293b",
+            secondary: "#94a3b8",
+            "on-secondary": "#020617",
+            error: "#ef4444"
+          },
+          borderRadius: {
+            DEFAULT: "0.125rem",
+            lg: "0.25rem",
+            xl: "0.5rem",
+            full: "0.75rem"
+          },
+          fontFamily: {
+            headline: ["Plus Jakarta Sans", "sans-serif"],
+            body: ["Plus Jakarta Sans", "sans-serif"],
+            label: ["Plus Jakarta Sans", "sans-serif"]
+          },
+          boxShadow: {
+            glow: "0 0 32px rgba(249, 115, 22, 0.18)"
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings: "FILL" 0, "wght" 500, "GRAD" 0, "opsz" 24;
+      vertical-align: middle;
+    }
+
+    .topo-pattern {
+      background-image: radial-gradient(circle at 1px 1px, rgba(30, 41, 59, 0.9) 1px, transparent 0);
+      background-size: 40px 40px;
+      opacity: 0.45;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    .hero-title {
+      letter-spacing: -0.05em;
+      line-height: 1;
+    }
+
+    .section-title {
+      letter-spacing: -0.04em;
+      line-height: 1.08;
+    }
+
+    .eyebrow-label {
+      letter-spacing: 0.14em;
+      font-weight: 700;
+    }
+
+    .ui-label {
+      letter-spacing: 0.1em;
+      font-weight: 700;
+    }
+  </style>
+</head>
+
+<body id="top" class="overflow-x-hidden bg-background font-body text-on-surface antialiased">
+  <nav class="fixed top-0 z-50 h-16 w-full border-b border-slate-800/50 bg-slate-950/80 px-4 backdrop-blur-xl sm:px-6 md:px-12">
+    <div class="relative mx-auto flex h-full max-w-7xl items-center justify-between">
+      <div class="flex items-center gap-3 sm:gap-4">
+        <a class="flex items-center" href="#top" aria-label="MCPIDS home">
+          <img src="assets/mcpids_logo_inverted.png" alt="MCPIDS logo"
+            class="block h-9 w-auto max-w-[124px] shrink-0 sm:h-10 sm:max-w-[180px] md:h-12 md:max-w-[240px]" />
+        </a>
+        <div class="hidden items-center gap-6 md:flex">
+          <a class="text-slate-400 transition-colors hover:text-slate-100" href="#features">Features</a>
+          <a class="text-slate-400 transition-colors hover:text-slate-100" href="#how-it-works">How it Works</a>
+          <a class="text-slate-400 transition-colors hover:text-slate-100" href="#use-cases">Use Cases</a>
+          <a class="text-slate-400 transition-colors hover:text-slate-100" href="#quick-start">Quick Start</a>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 sm:gap-3">
+        <a class="hidden items-center gap-1 text-slate-400 transition-colors hover:text-slate-100 lg:flex"
+          href="https://github.com/mcpids/mcpids" target="_blank" rel="noreferrer">
+          <span class="material-symbols-outlined text-[18px]">open_in_new</span>
+          <span>GitHub</span>
+        </a>
+        <a class="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-on-primary transition-colors hover:bg-primary-container sm:px-4 sm:text-sm"
+          href="https://github.com/mcpids/mcpids/tree/main/docs" target="_blank" rel="noreferrer">
+          <span class="sm:hidden">Docs</span>
+          <span class="hidden sm:inline">Browse Docs</span>
+        </a>
+        <button
+          id="mobile-menu-button"
+          type="button"
+          aria-controls="mobile-menu"
+          aria-expanded="false"
+          aria-label="Open navigation menu"
+          class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-800/70 bg-slate-900/70 text-slate-200 transition-colors hover:border-primary/40 hover:text-white md:hidden"
+        >
+          <span class="material-symbols-outlined text-[20px]">menu</span>
+        </button>
+      </div>
+
+      <div
+        id="mobile-menu"
+        class="absolute left-0 right-0 top-[calc(100%+0.75rem)] hidden rounded-xl border border-slate-800/70 bg-slate-950/95 p-4 shadow-2xl shadow-black/40 backdrop-blur-xl md:hidden"
+      >
+        <div class="flex flex-col gap-2 text-sm">
+          <a class="rounded-lg px-3 py-3 text-slate-200 transition-colors hover:bg-slate-900 hover:text-white" href="#features">Features</a>
+          <a class="rounded-lg px-3 py-3 text-slate-200 transition-colors hover:bg-slate-900 hover:text-white" href="#how-it-works">How It Works</a>
+          <a class="rounded-lg px-3 py-3 text-slate-200 transition-colors hover:bg-slate-900 hover:text-white" href="#use-cases">Use Cases</a>
+          <a class="rounded-lg px-3 py-3 text-slate-200 transition-colors hover:bg-slate-900 hover:text-white" href="#quick-start">Quick Start</a>
+          <a class="rounded-lg px-3 py-3 text-slate-200 transition-colors hover:bg-slate-900 hover:text-white" href="https://github.com/mcpids/mcpids" target="_blank" rel="noreferrer">GitHub</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="relative">
+    <section class="relative overflow-hidden px-4 pb-20 pt-28 sm:px-6 sm:pt-32">
+      <div class="topo-pattern absolute inset-0 -z-10"></div>
+      <div class="mx-auto grid max-w-7xl gap-8 sm:gap-12 lg:grid-cols-2 lg:items-center">
+        <div class="space-y-8">
+          <div
+            class="eyebrow-label inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-[10px] font-label uppercase text-primary sm:text-xs">
+            <span class="material-symbols-outlined text-base">verified_user</span>
+            Apache 2.0 Open Source
+          </div>
+          <div class="space-y-6">
+            <h1 class="hero-title text-4xl font-extrabold text-on-surface sm:text-5xl md:text-6xl">
+              Secure AI Tool Ecosystems with
+              <span
+                class="bg-gradient-to-r from-primary to-primary-container bg-clip-text text-transparent">MCPIDS</span>
+            </h1>
+            <p class="max-w-2xl text-base leading-relaxed text-on-surface-variant sm:text-lg">
+              MCPIDS is an inline security layer for Model Context Protocol deployments. It inspects every request and
+              response, detects prompt injection and secret leakage, and applies policy decisions before risky tool
+              behavior reaches production agents.
+            </p>
+          </div>
+          <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
+            <a class="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 py-4 text-center font-bold text-on-primary transition-all hover:bg-primary-container sm:w-auto sm:px-8"
+              href="https://github.com/mcpids/mcpids" target="_blank" rel="noreferrer">
+              <span>View on GitHub</span>
+              <span class="material-symbols-outlined text-[20px]">north_east</span>
+            </a>
+            <a class="flex w-full items-center justify-center rounded-lg border border-outline px-6 py-4 text-center font-bold text-on-surface transition-all hover:bg-surface-container-low sm:w-auto sm:px-8"
+              href="#quick-start">
+              Quick Start
+            </a>
+          </div>
+          <div class="grid grid-cols-1 gap-3 text-sm text-on-surface-variant min-[360px]:grid-cols-2">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary">shield</span>
+              Prompt injection defense
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary">key_off</span>
+              Secret leak prevention
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary">rule</span>
+              Policy-driven enforcement
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="relative rounded-xl border border-slate-800/50 bg-slate-900/40 p-5 shadow-2xl shadow-black/30 backdrop-blur-sm sm:p-8">
+          <div class="flex flex-col items-center gap-6">
+            <div class="flex w-full flex-col items-center sm:flex-row sm:items-center sm:justify-between">
+              <div
+                class="flex w-full max-w-[10rem] flex-col items-center gap-2 rounded-lg border border-slate-700/30 bg-slate-800/50 p-4 sm:w-32">
+                <span class="material-symbols-outlined text-secondary">smart_toy</span>
+                <span class="ui-label font-label text-[11px] font-semibold uppercase text-slate-400">AI Agent</span>
+              </div>
+              <div class="relative my-3 h-10 w-0.5 bg-slate-700/30 sm:mx-4 sm:my-0 sm:h-0.5 sm:w-auto sm:flex-grow">
+                <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-900 px-2">
+                  <span class="material-symbols-outlined text-sm text-primary">security</span>
+                </div>
+              </div>
+              <div
+                class="relative flex w-full max-w-[10rem] flex-col items-center gap-2 rounded-lg border border-primary/20 bg-primary/10 p-4 shadow-glow sm:w-40">
+                <div
+                  class="absolute -right-2 -top-2 h-4 w-4 rounded-full bg-primary shadow-[0_0_14px_rgba(249,115,22,0.65)]">
+                </div>
+                <span class="material-symbols-outlined text-primary">shield_with_heart</span>
+                <span class="ui-label font-label text-[11px] font-bold text-primary">MCPIDS</span>
+              </div>
+              <div class="my-3 h-10 w-0.5 bg-slate-700/30 sm:mx-4 sm:my-0 sm:h-0.5 sm:w-auto sm:flex-grow"></div>
+              <div
+                class="flex w-full max-w-[10rem] flex-col items-center gap-2 rounded-lg border border-slate-700/30 bg-slate-800/50 p-4 sm:w-32">
+                <span class="material-symbols-outlined text-secondary">dns</span>
+                <span class="ui-label font-label text-[11px] font-semibold uppercase text-slate-400">MCP
+                  Server</span>
+              </div>
+            </div>
+
+            <div
+              class="w-full rounded-lg border border-slate-800/50 bg-slate-950/60 p-4 font-label text-[11px] text-on-surface-variant">
+              <div class="mb-2 flex flex-col gap-1 opacity-60 sm:flex-row sm:items-center sm:justify-between">
+                <span>INSPECTION_LOG</span>
+                <span class="text-green-500">STATUS: ALLOW</span>
+              </div>
+              <div class="text-primary">[INFO] Intercepting JSON-RPC request...</div>
+              <div>[INFO] Rules match score: 0.01</div>
+              <div>[INFO] Secret scan: clean</div>
+              <div>[INFO] Policy set: default.yaml</div>
+              <div class="text-green-500">[PASS] Forwarded to destination.</div>
+            </div>
+
+            <div class="grid w-full gap-4 md:grid-cols-3">
+              <div class="rounded-lg border border-slate-800/50 bg-slate-950/40 p-4">
+                <p class="eyebrow-label font-label text-[10px] uppercase text-slate-500">Timeout Default</p>
+                <p class="mt-2 text-2xl font-bold text-slate-100">100ms</p>
+                <p class="mt-1 text-xs text-slate-400">Default fail-closed pipeline timeout</p>
+              </div>
+              <div class="rounded-lg border border-slate-800/50 bg-slate-950/40 p-4">
+                <p class="eyebrow-label font-label text-[10px] uppercase text-slate-500">Scenario Fixtures</p>
+                <p class="mt-2 text-2xl font-bold text-slate-100">8</p>
+                <p class="mt-1 text-xs text-slate-400">Bundled scenario fixtures</p>
+              </div>
+              <div class="rounded-lg border border-slate-800/50 bg-slate-950/40 p-4">
+                <p class="eyebrow-label font-label text-[10px] uppercase text-slate-500">Core Components</p>
+                <p class="mt-2 text-2xl font-bold text-slate-100">5</p>
+                <p class="mt-1 text-xs text-slate-400">Gateway, control plane, agent, semantic service, sensor</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="border-y border-slate-800/30 bg-slate-900/20 px-4 py-16 sm:px-6 sm:py-24">
+      <div class="mx-auto max-w-4xl space-y-5 text-center sm:space-y-6">
+        <h2 class="section-title text-2xl font-bold text-on-surface sm:text-3xl">The Unchecked Autonomy Problem</h2>
+        <p class="text-base italic leading-relaxed text-on-surface-variant sm:text-lg">
+          "As AI agents move from chat interfaces to autonomous tool execution, the attack surface expands rapidly.
+          Without inline inspection, trusted MCP connections become a path for jailbroken logic, credential exposure,
+          and cross-system exfiltration."
+        </p>
+        <div class="mt-8 grid gap-4 text-left sm:mt-12 sm:gap-8 md:grid-cols-2">
+          <div class="rounded-lg border border-slate-800/50 bg-slate-900/40 p-5 backdrop-blur-sm sm:p-6">
+            <span class="ui-label mb-2 block font-label text-[11px] font-bold text-primary">RISK_01</span>
+            <h3 class="mb-2 font-bold text-slate-100">Indirect Prompt Injection</h3>
+            <p class="text-sm text-slate-400">
+              Malicious instructions hidden in external content can pressure agents into unauthorized tool calls and
+              unsafe reasoning paths.
+            </p>
+          </div>
+          <div class="rounded-lg border border-slate-800/50 bg-slate-900/40 p-5 backdrop-blur-sm sm:p-6">
+            <span class="ui-label mb-2 block font-label text-[11px] font-bold text-primary">RISK_02</span>
+            <h3 class="mb-2 font-bold text-slate-100">Secret Leakage</h3>
+            <p class="text-sm text-slate-400">
+              Tool responses and prompt context can accidentally expose API keys, tokens, tenant data, or system secrets
+              to downstream models.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24" id="features">
+      <div class="mb-10 flex flex-col gap-5 sm:mb-16 sm:gap-6 md:flex-row md:items-end md:justify-between">
+        <div>
+          <h2 class="section-title mb-3 text-2xl font-bold text-on-surface sm:mb-4 sm:text-3xl">Precision Guardrails</h2>
+          <p class="max-w-2xl text-on-surface-variant">
+            Deep inspection for every request and response moving through your MCP ecosystem, with policy-backed
+            decisions that remain explainable.
+          </p>
+        </div>
+        <div class="eyebrow-label font-label text-xs uppercase text-slate-500">Repository-Aligned Features</div>
+      </div>
+
+      <div class="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div
+          class="group rounded-lg border border-slate-800/50 bg-slate-900/30 p-5 transition-colors hover:bg-slate-800/40 sm:p-6">
+          <span
+            class="material-symbols-outlined mb-4 text-primary transition-transform group-hover:scale-110">visibility</span>
+          <h3 class="mb-2 font-bold text-slate-100">Traffic Inspection</h3>
+          <p class="text-sm text-slate-400">Inspects MCP JSON-RPC messages flowing between agents and servers.</p>
+        </div>
+        <div
+          class="group rounded-lg border border-slate-800/50 bg-slate-900/30 p-5 transition-colors hover:bg-slate-800/40 sm:p-6">
+          <span
+            class="material-symbols-outlined mb-4 text-primary transition-transform group-hover:scale-110">gpp_maybe</span>
+          <h3 class="mb-2 font-bold text-slate-100">Injection Detection</h3>
+          <p class="text-sm text-slate-400">Rules and semantic analysis detect adversarial prompts and jailbreak-style
+            instructions.</p>
+        </div>
+        <div
+          class="group rounded-lg border border-slate-800/50 bg-slate-900/30 p-5 transition-colors hover:bg-slate-800/40 sm:p-6">
+          <span
+            class="material-symbols-outlined mb-4 text-primary transition-transform group-hover:scale-110">no_encryption</span>
+          <h3 class="mb-2 font-bold text-slate-100">Secret Prevention</h3>
+          <p class="text-sm text-slate-400">PII and credential signatures are scanned before content reaches agents or
+            LLM providers.</p>
+        </div>
+        <div
+          class="group rounded-lg border border-slate-800/50 bg-slate-900/30 p-5 transition-colors hover:bg-slate-800/40 sm:p-6">
+          <span
+            class="material-symbols-outlined mb-4 text-primary transition-transform group-hover:scale-110">rule</span>
+          <h3 class="mb-2 font-bold text-slate-100">Policy Enforcement</h3>
+          <p class="text-sm text-slate-400">Fine-grained policy rules restrict tool use by action, path, context, risk,
+            or tenant.</p>
+        </div>
+        <div
+          class="group rounded-lg border border-slate-800/50 bg-slate-900/30 p-5 transition-colors hover:bg-slate-800/40 sm:p-6">
+          <span
+            class="material-symbols-outlined mb-4 text-primary transition-transform group-hover:scale-110">analytics</span>
+          <h3 class="mb-2 font-bold text-slate-100">Risk Scoring</h3>
+          <p class="text-sm text-slate-400">Every transaction gets a weighted risk score across rules, semantic, diff,
+            and graph signals.</p>
+        </div>
+        <div
+          class="group rounded-lg border border-slate-800/50 bg-slate-900/30 p-5 transition-colors hover:bg-slate-800/40 sm:p-6">
+          <span
+            class="material-symbols-outlined mb-4 text-primary transition-transform group-hover:scale-110">history_edu</span>
+          <h3 class="mb-2 font-bold text-slate-100">Audit Trails</h3>
+          <p class="text-sm text-slate-400">Append-only audit records for compliance reviews, incident response, and
+            forensics.</p>
+        </div>
+        <div
+          class="group rounded-lg border border-slate-800/50 bg-slate-900/30 p-5 transition-colors hover:bg-slate-800/40 sm:p-6">
+          <span
+            class="material-symbols-outlined mb-4 text-primary transition-transform group-hover:scale-110">schema</span>
+          <h3 class="mb-2 font-bold text-slate-100">Schema Detection</h3>
+          <p class="text-sm text-slate-400">Silent tool definition changes are flagged before widened capabilities
+            escape review.</p>
+        </div>
+        <div
+          class="group rounded-lg border border-slate-800/50 bg-slate-900/30 p-5 transition-colors hover:bg-slate-800/40 sm:p-6">
+          <span
+            class="material-symbols-outlined mb-4 text-primary transition-transform group-hover:scale-110">approval_delegation</span>
+          <h3 class="mb-2 font-bold text-slate-100">Approval Flows</h3>
+          <p class="text-sm text-slate-400">High-risk actions can be held for human approval before writes,
+            exfiltration, or destructive changes.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="bg-slate-900/40 px-4 py-16 sm:px-6 sm:py-24" id="how-it-works">
+      <div class="mx-auto max-w-7xl">
+        <div class="mb-10 text-center sm:mb-16">
+          <h2 class="section-title text-2xl font-bold text-on-surface sm:text-3xl">Real-Time Inspection and Policy Enforcement</h2>
+          <p class="mt-4 text-on-surface-variant">Inline proxying by routing clients through the gateway or wrapping stdio agents.</p>
+        </div>
+
+        <div class="grid gap-6 sm:gap-8 lg:grid-cols-4">
+          <div class="space-y-4">
+            <div
+              class="flex h-12 w-12 items-center justify-center rounded bg-primary font-label font-bold text-on-primary shadow-[0_0_15px_rgba(249,115,22,0.3)]">
+              01</div>
+            <h3 class="font-bold text-slate-100">Intercept</h3>
+            <p class="text-sm text-slate-400">MCPIDS receives the JSON-RPC call as lightweight middleware and proxies
+              the transport stream.</p>
+          </div>
+          <div class="space-y-4">
+            <div
+              class="flex h-12 w-12 items-center justify-center rounded bg-primary font-label font-bold text-on-primary shadow-[0_0_15px_rgba(249,115,22,0.3)]">
+              02</div>
+            <h3 class="font-bold text-slate-100">Analyze</h3>
+            <p class="text-sm text-slate-400">Rules, semantic classifiers, and secret scans inspect intent, content, and
+              known threat patterns.</p>
+          </div>
+          <div class="space-y-4">
+            <div
+              class="flex h-12 w-12 items-center justify-center rounded bg-primary font-label font-bold text-on-primary shadow-[0_0_15px_rgba(249,115,22,0.3)]">
+              03</div>
+            <h3 class="font-bold text-slate-100">Evaluate</h3>
+            <p class="text-sm text-slate-400">Signals are aggregated into risk scores and matched against policy
+              decisions for each tenant and tool.</p>
+          </div>
+          <div class="space-y-4">
+            <div
+              class="flex h-12 w-12 items-center justify-center rounded bg-primary font-label font-bold text-on-primary shadow-[0_0_15px_rgba(249,115,22,0.3)]">
+              04</div>
+            <h3 class="font-bold text-slate-100">Route</h3>
+            <p class="text-sm text-slate-400">Safe traffic is forwarded. Unsafe traffic is blocked, redacted,
+              quarantined, or held for approval.</p>
+          </div>
+        </div>
+
+        <div class="mx-auto mt-12 max-w-3xl overflow-hidden rounded-lg border border-slate-700/50 shadow-2xl sm:mt-20">
+          <div class="flex items-center justify-between border-b border-slate-700/50 bg-slate-800 px-4 py-3 sm:px-6">
+            <div class="flex gap-1.5">
+              <div class="h-2.5 w-2.5 rounded-full bg-red-500"></div>
+              <div class="h-2.5 w-2.5 rounded-full bg-yellow-500"></div>
+              <div class="h-2.5 w-2.5 rounded-full bg-green-500"></div>
+            </div>
+            <span class="ui-label font-label text-[10px] uppercase text-slate-400">policies/default.yaml</span>
+          </div>
+          <div class="overflow-x-auto bg-slate-950 p-5 font-label text-xs leading-relaxed text-slate-300 sm:p-8 sm:text-sm">
+            <div class="text-slate-600"># Redact secrets in tool call responses</div>
+            <div><span class="text-primary">id:</span> policy-redact-secrets</div>
+            <div><span class="text-primary">priority:</span> 20</div>
+            <div><span class="text-primary">scope:</span></div>
+            <div class="pl-4"><span class="text-primary">methods:</span> [<span class="text-green-400">tools/call</span>]</div>
+            <div class="pl-4"><span class="text-primary">directions:</span> [<span class="text-green-400">outbound</span>]</div>
+            <div><span class="text-primary">conditions:</span></div>
+            <div class="pl-4"><span class="text-primary">- field:</span> <span class="text-green-400">"result.text"</span></div>
+            <div class="pl-6"><span class="text-primary">op:</span> <span class="text-green-400">secret_pattern</span></div>
+            <div><span class="text-primary">action:</span></div>
+            <div class="pl-4"><span class="text-primary">decision:</span> <span class="text-red-400">redact</span></div>
+            <div><span class="text-primary">severity:</span> critical</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="bg-slate-950 px-4 py-16 sm:px-6 sm:py-24" id="use-cases">
+      <div class="mx-auto grid max-w-7xl gap-10 sm:gap-16 lg:grid-cols-2 lg:items-center">
+        <div>
+          <h2 class="section-title mb-5 text-2xl font-bold text-on-surface sm:mb-6 sm:text-3xl">Designed for Every Agent Journey</h2>
+          <div class="space-y-6 sm:space-y-8">
+            <div class="flex gap-3 sm:gap-4">
+              <div class="h-fit rounded border border-primary/20 bg-primary/10 p-3">
+                <span class="material-symbols-outlined text-primary">code</span>
+              </div>
+              <div>
+                <h3 class="font-bold text-slate-100">Secure AI Coding Agents</h3>
+                <p class="text-sm text-slate-400">Detect destructive shell-style tool requests and suspicious multi-step
+                  exfiltration patterns in agent sessions.</p>
+              </div>
+            </div>
+            <div class="flex gap-3 sm:gap-4">
+              <div class="h-fit rounded border border-primary/20 bg-primary/10 p-3">
+                <span class="material-symbols-outlined text-primary">corporate_fare</span>
+              </div>
+              <div>
+                <h3 class="font-bold text-slate-100">Enterprise Agent Workflows</h3>
+                <p class="text-sm text-slate-400">Enforce data boundaries even when agents orchestrate tools across
+                  departments and systems.</p>
+              </div>
+            </div>
+            <div class="flex gap-3 sm:gap-4">
+              <div class="h-fit rounded border border-primary/20 bg-primary/10 p-3">
+                <span class="material-symbols-outlined text-primary">monitoring</span>
+              </div>
+              <div>
+                <h3 class="font-bold text-slate-100">Ecosystem Monitoring</h3>
+                <p class="text-sm text-slate-400">Observe tool execution patterns to detect lateral movement, schema
+                  drift, and shadow IT behavior.</p>
+              </div>
+            </div>
+            <div class="flex gap-3 sm:gap-4">
+              <div class="h-fit rounded border border-primary/20 bg-primary/10 p-3">
+                <span class="material-symbols-outlined text-primary">health_and_safety</span>
+              </div>
+              <div>
+                <h3 class="font-bold text-slate-100">Guardrails for Autonomy</h3>
+                <p class="text-sm text-slate-400">Set hard limits on risky tools, outbound destinations, and sensitive
+                  paths before autonomous loops spiral.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="relative rounded-xl border border-slate-800/50 bg-slate-900/50 p-5 shadow-2xl shadow-black/30 sm:p-8">
+          <div class="absolute -inset-1 -z-10 rounded-xl bg-gradient-to-r from-primary/25 to-orange-400/10 blur-xl">
+          </div>
+          <div class="grid gap-4 md:grid-cols-2">
+            <div class="rounded-lg border border-slate-800/50 bg-slate-950/50 p-5">
+              <p class="eyebrow-label font-label text-[10px] uppercase text-slate-500">Threat Fixtures</p>
+              <div class="mt-4 flex items-center gap-3">
+                <div
+                  class="flex h-10 w-10 items-center justify-center rounded border border-green-500/20 bg-green-500/10">
+                  <span class="material-symbols-outlined text-green-500">check_circle</span>
+                </div>
+                <div>
+                  <p class="text-sm font-bold text-slate-100">8 bundled scenarios</p>
+                  <p class="text-[10px] text-slate-400">Covered by repository tests and fixtures</p>
+                </div>
+              </div>
+            </div>
+            <div class="rounded-lg border border-slate-800/50 bg-slate-950/50 p-5">
+              <p class="eyebrow-label font-label text-[10px] uppercase text-slate-500">Decision Precedence</p>
+              <p class="mt-4 text-base font-bold leading-relaxed text-primary sm:text-lg">quarantine &gt; deny &gt;
+                require_approval &gt; redact &gt; hide &gt; monitor_only &gt; allow</p>
+              <p class="mt-2 text-xs text-slate-400">Most restrictive decision wins when multiple interceptors contribute signals</p>
+            </div>
+            <div class="rounded-lg border border-slate-800/50 bg-slate-950/50 p-5 md:col-span-2">
+              <p class="eyebrow-label font-label text-[10px] uppercase text-slate-500">Representative Outcomes</p>
+              <div class="mt-4 space-y-3">
+                <div
+                  class="flex flex-col items-start gap-2 rounded border border-slate-800/50 bg-slate-900/40 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+                  <span class="text-slate-300">Tool response contains an injected prompt</span>
+                  <span
+                    class="rounded bg-red-500/15 px-2 py-1 font-label text-[10px] uppercase tracking-[0.12em] text-red-400">redact</span>
+                </div>
+                <div
+                  class="flex flex-col items-start gap-2 rounded border border-slate-800/50 bg-slate-900/40 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+                  <span class="text-slate-300">Tool schema widens after a server update</span>
+                  <span
+                    class="rounded bg-amber-500/15 px-2 py-1 font-label text-[10px] uppercase tracking-[0.12em] text-amber-400">require
+                    approval</span>
+                </div>
+                <div
+                  class="flex flex-col items-start gap-2 rounded border border-slate-800/50 bg-slate-900/40 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+                  <span class="text-slate-300">`read_secrets` chains into `post_to_webhook` in the same session</span>
+                  <span
+                    class="rounded bg-green-500/15 px-2 py-1 font-label text-[10px] uppercase tracking-[0.12em] text-green-400">quarantine</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="bg-background px-4 py-16 sm:px-6 sm:py-24" id="quick-start">
+      <div
+        class="mx-auto grid max-w-7xl gap-8 rounded-2xl border border-slate-800/50 bg-slate-900/40 p-6 backdrop-blur-sm sm:gap-12 sm:p-12 md:grid-cols-2 md:items-center">
+        <div>
+          <h2 class="section-title mb-4 text-2xl font-bold text-on-surface">Developer Quick Start</h2>
+          <p class="mb-6 text-on-surface-variant sm:mb-8">
+            Local development uses Go, Docker, and Make. For the fastest demo, run the bundled script. For a fuller
+            setup, follow the same `make`-based flow documented in the README and local development guide.
+          </p>
+          <div class="space-y-4">
+            <button
+              class="copy-command flex w-full items-center justify-between rounded border border-slate-800/50 bg-slate-950 px-4 py-3 text-left font-label text-xs text-slate-300 transition-colors hover:border-primary/40 hover:text-white sm:py-4 sm:text-sm"
+              data-copy="./scripts/demo-local.sh" type="button">
+              <span>./scripts/demo-local.sh</span>
+              <span class="material-symbols-outlined text-sm text-slate-500">content_copy</span>
+            </button>
+            <button
+              class="copy-command flex w-full items-center justify-between rounded border border-slate-800/50 bg-slate-950 px-4 py-3 text-left font-label text-xs text-slate-300 transition-colors hover:border-primary/40 hover:text-white sm:py-4 sm:text-sm"
+              data-copy="make docker-up &amp;&amp; make migrate &amp;&amp; make seed" type="button">
+              <span>make docker-up &amp;&amp; make migrate &amp;&amp; make seed</span>
+              <span class="material-symbols-outlined text-sm text-slate-500">content_copy</span>
+            </button>
+            <button
+              class="copy-command flex w-full items-center justify-between rounded border border-slate-800/50 bg-slate-950 px-4 py-3 text-left font-label text-xs text-slate-300 transition-colors hover:border-primary/40 hover:text-white sm:py-4 sm:text-sm"
+              data-copy="make run-control-plane &amp;" type="button">
+              <span>make run-control-plane &amp;</span>
+              <span class="material-symbols-outlined text-sm text-slate-500">content_copy</span>
+            </button>
+            <button
+              class="copy-command flex w-full items-center justify-between rounded border border-slate-800/50 bg-slate-950 px-4 py-3 text-left font-label text-xs text-slate-300 transition-colors hover:border-primary/40 hover:text-white sm:py-4 sm:text-sm"
+              data-copy="make run-gateway &amp;" type="button">
+              <span>make run-gateway &amp;</span>
+              <span class="material-symbols-outlined text-sm text-slate-500">content_copy</span>
+            </button>
+          </div>
+          <div class="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:flex-wrap sm:gap-4">
+            <a class="rounded-lg bg-primary px-6 py-3 text-center text-sm font-bold text-on-primary transition-all hover:brightness-110"
+              href="https://github.com/mcpids/mcpids/blob/main/docs/architecture.md" target="_blank" rel="noreferrer">
+              Architecture Docs
+            </a>
+            <a class="rounded-lg bg-slate-800 px-6 py-3 text-center text-sm font-bold text-slate-100 transition-all hover:bg-slate-700"
+              href="https://github.com/mcpids/mcpids#quick-start" target="_blank" rel="noreferrer">
+              Quick Start Guide
+            </a>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-4 min-[360px]:grid-cols-2">
+          <div class="rounded-xl border border-slate-800/50 bg-slate-900/20 p-6">
+            <h3 class="ui-label mb-2 font-label text-xs text-primary">EXTENSIBLE</h3>
+            <p class="text-sm font-bold text-slate-100">Tenant-Scoped Policy Rules</p>
+          </div>
+          <div class="rounded-xl border border-slate-800/50 bg-slate-900/20 p-6">
+            <h3 class="ui-label mb-2 font-label text-xs text-primary">NATIVE</h3>
+            <p class="text-sm font-bold text-slate-100">Go Gateway and Control Plane</p>
+          </div>
+          <div class="rounded-xl border border-slate-800/50 bg-slate-900/20 p-6">
+            <h3 class="ui-label mb-2 font-label text-xs text-primary">SECURE</h3>
+            <p class="text-sm font-bold text-slate-100">Gateway TLS, optional control-plane mTLS</p>
+          </div>
+          <div class="rounded-xl border border-slate-800/50 bg-slate-900/20 p-6">
+            <h3 class="ui-label mb-2 font-label text-xs text-primary">FAST</h3>
+            <p class="text-sm font-bold text-slate-100">100ms default fail-closed timeout</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="border-t border-slate-800 bg-slate-950 px-4 py-12 text-sm text-slate-400 sm:px-6 sm:py-16 md:px-12">
+    <div class="mx-auto grid max-w-7xl gap-8 sm:gap-12 md:grid-cols-2 lg:grid-cols-4">
+      <div class="space-y-6">
+        <span class="text-lg font-bold text-slate-100">MCPIDS</span>
+        <p class="max-w-xs text-xs leading-relaxed">
+          Open-source, Apache 2.0-licensed inline security for the Model Context Protocol ecosystem.
+        </p>
+      </div>
+
+      <div class="space-y-4">
+        <h2 class="font-bold text-slate-100">Project</h2>
+        <ul class="space-y-2">
+          <li><a class="transition-colors hover:text-primary" href="https://github.com/mcpids/mcpids/tree/main/docs"
+              target="_blank" rel="noreferrer">Documentation</a></li>
+          <li><a class="transition-colors hover:text-primary" href="https://github.com/mcpids/mcpids" target="_blank"
+              rel="noreferrer">GitHub Repository</a></li>
+          <li><a class="transition-colors hover:text-primary"
+              href="https://github.com/mcpids/mcpids/blob/main/SECURITY.md" target="_blank" rel="noreferrer">Security
+              Policy</a></li>
+          <li><a class="transition-colors hover:text-primary"
+              href="https://github.com/mcpids/mcpids/blob/main/CONTRIBUTING.md" target="_blank"
+              rel="noreferrer">Contributing</a></li>
+        </ul>
+      </div>
+
+      <div class="space-y-4">
+        <h2 class="font-bold text-slate-100">Contact</h2>
+        <ul class="space-y-2">
+          <li><a class="transition-colors hover:text-primary" href="https://github.com/mcpids/mcpids/issues/new/choose"
+              target="_blank" rel="noreferrer">Report an Issue</a></li>
+          <li><a class="transition-colors hover:text-primary" href="https://github.com/mcpids/mcpids/pulls"
+              target="_blank" rel="noreferrer">Pull Requests</a></li>
+          <li><a class="transition-colors hover:text-primary"
+              href="https://github.com/mcpids/mcpids/security/advisories/new" target="_blank" rel="noreferrer">Private
+              Vulnerability Report</a></li>
+        </ul>
+      </div>
+
+      <div class="space-y-4">
+        <h2 class="font-bold text-slate-100">Transparency</h2>
+        <p class="ui-label font-label text-[10px] uppercase text-slate-500">License</p>
+        <div class="flex items-center gap-2 font-bold text-primary">
+          <span class="material-symbols-outlined text-[16px]">verified_user</span>
+          <span>Apache License 2.0</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    var mobileMenuButton = document.getElementById("mobile-menu-button");
+    var mobileMenu = document.getElementById("mobile-menu");
+
+    function setMobileMenu(open) {
+      if (!mobileMenuButton || !mobileMenu) {
+        return;
+      }
+
+      mobileMenu.classList.toggle("hidden", !open);
+      mobileMenuButton.setAttribute("aria-expanded", open ? "true" : "false");
+      mobileMenuButton.querySelector(".material-symbols-outlined").textContent = open ? "close" : "menu";
+    }
+
+    if (mobileMenuButton && mobileMenu) {
+      mobileMenuButton.addEventListener("click", function () {
+        setMobileMenu(mobileMenu.classList.contains("hidden"));
+      });
+
+      mobileMenu.querySelectorAll("a").forEach(function (link) {
+        link.addEventListener("click", function () {
+          setMobileMenu(false);
+        });
+      });
+
+      document.addEventListener("click", function (event) {
+        if (mobileMenu.classList.contains("hidden")) {
+          return;
+        }
+
+        if (!mobileMenu.contains(event.target) && !mobileMenuButton.contains(event.target)) {
+          setMobileMenu(false);
+        }
+      });
+
+      window.addEventListener("resize", function () {
+        if (window.innerWidth >= 768) {
+          setMobileMenu(false);
+        }
+      });
+    }
+
+    document.querySelectorAll(".copy-command").forEach(function (button) {
+      button.addEventListener("click", async function () {
+        var command = button.getAttribute("data-copy");
+        var icon = button.querySelector(".material-symbols-outlined");
+        var previous = icon.textContent;
+
+        try {
+          await navigator.clipboard.writeText(command);
+          icon.textContent = "check";
+          button.style.borderColor = "#f97316";
+          setTimeout(function () {
+            icon.textContent = previous;
+            button.style.borderColor = "";
+          }, 1400);
+        } catch (error) {
+          icon.textContent = "error";
+          setTimeout(function () {
+            icon.textContent = previous;
+          }, 1400);
+        }
+      });
+    });
+  </script>
+</body>
+
+</html>

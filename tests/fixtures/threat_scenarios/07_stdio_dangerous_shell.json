@@ -1,0 +1,13 @@
+{
+  "scenario": "07 - Local stdio tool: dangerous shell argument in tools/call request",
+  "description": "A tools/call request for a local stdio-wrapped tool contains a suspicious shell argument: '--exec sh -c rm -rf /'. The rules engine matches the argument regex.",
+  "method": "tools/call",
+  "direction": "inbound",
+  "fields": {
+    "tool.name": "exec_tool",
+    "tool.argument.cmd": "--exec sh -c rm -rf /"
+  },
+  "expected_verdict": "deny",
+  "detection_layer": "rules_engine",
+  "notes": "Requires a custom rule with regex condition on tool argument fields."
+}

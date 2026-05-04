@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package mcpids.v1;
+
+option go_package = "github.com/mcpids/mcpids/pkg/proto/gen/mcpids/v1;mcpidsv1";
+
+import "mcpids/v1/verdict.proto";
+
+// EventService receives audit, detection, and session lifecycle events from
+// gateways, agents, and sensors.
+service EventService {
+  // PublishEvent publishes a single event to the control plane.
+  rpc PublishEvent(Event) returns (EventAck);
+
+  // PublishBatch publishes multiple events in a single RPC (preferred for high-volume).
+  rpc PublishBatch(EventBatch) returns (BatchAck);
+}
+
+// EventKind classifies the type of event.
+enum EventKind {
+  EVENT_KIND_UNSPECIFIED = 0;
+  EVENT_KIND_SESSION_STARTED = 1;
+  EVENT_KIND_SESSION_ENDED = 2;
+  EVENT_KIND_SESSION_QUARANTINED = 3;
+  EVENT_KIND_TOOL_CALL = 4;
+  EVENT_KIND_TOOL_CALL_BLOCKED = 5;
+  EVENT_KIND_TOOL_CALL_APPROVED = 6;
+  EVENT_KIND_TOOLS_LIST = 7;
+  EVENT_KIND_TOOLS_FILTERED = 8;
+  EVENT_KIND_DETECTION = 9;
+  EVENT_KIND_AUDIT = 10;
+  EVENT_KIND_SENSOR = 11;
+  EVENT_KIND_APPROVAL_CREATED = 12;
+  EVENT_KIND_APPROVAL_DECIDED = 13;
+}
+
+message Event {
+  string event_id = 1;
+  EventKind kind = 2;
+  string tenant_id = 3;
+  string agent_id = 4;
+  string session_id = 5;
+  string server_id = 6;
+  int64 timestamp = 7; // unix millis
+  // payload_json is event-specific data serialized as JSON.
+  bytes payload_json = 8;
+  // verdict is attached when the event triggered a policy decision.
+  Verdict verdict = 9;
+}
+
+message EventBatch {
+  repeated Event events = 1;
+}
+
+message EventAck {
+  string event_id = 1;
+}
+
+message BatchAck {
+  int32 accepted = 1;
+  int32 rejected = 2;
+}

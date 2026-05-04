@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MCPIDS Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:      #0f1117;
+      --surface: #1a1d27;
+      --border:  #2a2d3a;
+      --accent:  #7c6af7;
+      --danger:  #f05252;
+      --warn:    #f59e0b;
+      --ok:      #22c55e;
+      --muted:   #6b7280;
+      --text:    #e2e8f0;
+      --text2:   #a0aec0;
+      --font:    'Inter', system-ui, sans-serif;
+      --radius:  8px;
+    }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); display: flex; height: 100vh; overflow: hidden; }
+
+    /* Sidebar */
+    nav { width: 220px; min-width: 220px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 24px 0; }
+    .nav-logo { padding: 0 20px 24px; font-size: 1.1rem; font-weight: 700; color: var(--accent); letter-spacing: .5px; }
+    .nav-logo span { color: var(--text); }
+    .nav-item { padding: 10px 20px; cursor: pointer; color: var(--text2); font-size: .875rem; border-left: 3px solid transparent; transition: .15s; display: flex; align-items: center; gap: 10px; }
+    .nav-item:hover { background: rgba(124,106,247,.08); color: var(--text); }
+    .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(124,106,247,.1); }
+    .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+    .nav-sep { margin: 8px 20px; border: none; border-top: 1px solid var(--border); }
+
+    /* Main */
+    main { flex: 1; overflow-y: auto; padding: 28px 32px; }
+    h2 { font-size: 1.25rem; font-weight: 600; margin-bottom: 20px; }
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* Stat cards */
+    .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; margin-bottom: 28px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; }
+    .card-label { font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; }
+    .card-value { font-size: 2rem; font-weight: 700; }
+    .card-value.danger { color: var(--danger); }
+    .card-value.warn   { color: var(--warn); }
+    .card-value.ok     { color: var(--ok); }
+    .card-value.accent { color: var(--accent); }
+
+    /* Tables */
+    .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+    th { background: #1e2130; text-align: left; padding: 11px 16px; color: var(--muted); font-weight: 500; font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; }
+    td { padding: 11px 16px; border-top: 1px solid var(--border); vertical-align: middle; }
+    tr:hover td { background: rgba(255,255,255,.02); }
+    .empty { padding: 36px; text-align: center; color: var(--muted); font-size: .875rem; }
+
+    /* Badges */
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: .7rem; font-weight: 600; text-transform: uppercase; }
+    .badge.red    { background: rgba(240,82,82,.15); color: var(--danger); }
+    .badge.yellow { background: rgba(245,158,11,.15); color: var(--warn); }
+    .badge.green  { background: rgba(34,197,94,.15); color: var(--ok); }
+    .badge.purple { background: rgba(124,106,247,.15); color: var(--accent); }
+    .badge.gray   { background: rgba(107,114,128,.15); color: var(--muted); }
+
+    /* Toolbar */
+    .toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .toolbar input { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius); padding: 7px 12px; font-size: .875rem; outline: none; width: 260px; }
+    .toolbar input:focus { border-color: var(--accent); }
+    .btn { padding: 7px 14px; border-radius: var(--radius); font-size: .875rem; cursor: pointer; border: none; font-family: var(--font); transition: .15s; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #6b59e8; }
+    .btn-ghost  { background: transparent; color: var(--text2); border: 1px solid var(--border); }
+    .btn-ghost:hover  { color: var(--text); border-color: var(--text2); }
+
+    /* Risk meter */
+    .risk-bar-wrap { display: flex; align-items: center; gap: 10px; }
+    .risk-bar { height: 6px; border-radius: 3px; background: var(--border); flex: 1; min-width: 60px; overflow: hidden; }
+    .risk-bar-fill { height: 100%; border-radius: 3px; transition: width .4s; }
+
+    /* Agent analyze panel */
+    .analyze-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; max-width: 560px; }
+    .analyze-row { display: flex; justify-content: space-between; padding: 8px 0; border-top: 1px solid var(--border); font-size: .875rem; }
+    .analyze-row:first-child { border-top: none; }
+    .analyze-key { color: var(--muted); }
+    .analyze-val { font-weight: 600; }
+
+    /* Graph viz */
+    #graph-svg { width: 100%; min-height: 380px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+
+    /* Spinner */
+    .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Notifications */
+    #toast { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+    .toast-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 18px; font-size: .875rem; animation: fadeIn .2s; }
+    .toast-item.err { border-color: var(--danger); color: var(--danger); }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; } }
+  </style>
+</head>
+<body>
+<nav>
+  <div class="nav-logo">MCP<span>IDS</span></div>
+  <div class="nav-item active" data-page="overview">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    Overview
+  </div>
+  <div class="nav-item" data-page="sessions">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    Sessions
+  </div>
+  <div class="nav-item" data-page="detections">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    Detections
+  </div>
+  <div class="nav-item" data-page="approvals">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+    Approvals
+  </div>
+  <hr class="nav-sep" />
+  <div class="nav-item" data-page="graph">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+    Graph
+  </div>
+  <div class="nav-item" data-page="agents">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+    Agents
+  </div>
+</nav>
+
+<main>
+  <!-- Overview -->
+  <div class="page active" id="page-overview">
+    <h2>Overview</h2>
+    <div class="cards" id="summary-cards">
+      <div class="card"><div class="card-label">Active Sessions</div><div class="card-value accent" id="stat-sessions">-</div></div>
+      <div class="card"><div class="card-label">Detections (24h)</div><div class="card-value danger" id="stat-detections">-</div></div>
+      <div class="card"><div class="card-label">Pending Approvals</div><div class="card-value warn" id="stat-approvals">-</div></div>
+      <div class="card"><div class="card-label">Servers Monitored</div><div class="card-value ok" id="stat-servers">-</div></div>
+    </div>
+    <h2>Recent Detections</h2>
+    <div class="table-wrap" id="recent-detections-wrap"><div class="empty"><span class="spinner"></span></div></div>
+  </div>
+
+  <!-- Sessions -->
+  <div class="page" id="page-sessions">
+    <h2>Sessions</h2>
+    <div class="toolbar">
+      <input id="session-search" placeholder="Filter by agent or server..." />
+      <button class="btn btn-ghost" onclick="loadSessions()">Refresh</button>
+    </div>
+    <div class="table-wrap" id="sessions-table-wrap"><div class="empty"><span class="spinner"></span></div></div>
+  </div>
+
+  <!-- Detections -->
+  <div class="page" id="page-detections">
+    <h2>Detections</h2>
+    <div class="toolbar">
+      <input id="detection-search" placeholder="Filter..." />
+      <button class="btn btn-ghost" onclick="loadDetections()">Refresh</button>
+    </div>
+    <div class="table-wrap" id="detections-table-wrap"><div class="empty"><span class="spinner"></span></div></div>
+  </div>
+
+  <!-- Approvals -->
+  <div class="page" id="page-approvals">
+    <h2>Pending Approvals</h2>
+    <div class="table-wrap" id="approvals-table-wrap"><div class="empty"><span class="spinner"></span></div></div>
+  </div>
+
+  <!-- Graph -->
+  <div class="page" id="page-graph">
+    <h2>Session Call Graph</h2>
+    <div class="toolbar">
+      <input id="graph-session-id" placeholder="Session ID..." />
+      <button class="btn btn-primary" onclick="loadSessionGraph()">Load Graph</button>
+    </div>
+    <svg id="graph-svg"></svg>
+    <div id="graph-legend" style="margin-top:12px;font-size:.75rem;color:var(--muted);display:flex;gap:16px;flex-wrap:wrap;"></div>
+  </div>
+
+  <!-- Agents (cross-session analysis) -->
+  <div class="page" id="page-agents">
+    <h2>Agent Cross-Session Analysis</h2>
+    <div class="toolbar">
+      <input id="agent-id-input" placeholder="Agent ID..." />
+      <button class="btn btn-primary" onclick="analyzeAgent()">Analyze</button>
+    </div>
+    <div id="agent-result"></div>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+const API = '/api/v1';
+
+// ─── Navigation ───────────────────────────────────────────────────────────────
+document.querySelectorAll('.nav-item').forEach(el => {
+  el.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    const page = el.dataset.page;
+    document.getElementById('page-' + page).classList.add('active');
+    if (page === 'overview')   loadOverview();
+    if (page === 'sessions')   loadSessions();
+    if (page === 'detections') loadDetections();
+    if (page === 'approvals')  loadApprovals();
+  });
+});
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+function toast(msg, isErr) {
+  const t = document.getElementById('toast');
+  const el = document.createElement('div');
+  el.className = 'toast-item' + (isErr ? ' err' : '');
+  el.textContent = msg;
+  t.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+// ─── Fetch helper ─────────────────────────────────────────────────────────────
+async function api(path) {
+  const res = await fetch(API + path);
+  if (!res.ok) throw new Error(res.statusText);
+  return res.json();
+}
+
+// ─── Severity badge ───────────────────────────────────────────────────────────
+function severityBadge(s) {
+  const m = { critical:'red', high:'red', medium:'yellow', low:'green', info:'gray' };
+  return `<span class="badge ${m[s] || 'gray'}">${s || '?'}</span>`;
+}
+
+function stateBadge(s) {
+  const m = { active:'green', quarantined:'red', closed:'gray', ready:'green' };
+  return `<span class="badge ${m[s] || 'gray'}">${s || '?'}</span>`;
+}
+
+function riskBar(score) {
+  const pct = Math.round((score || 0) * 100);
+  const color = pct > 60 ? 'var(--danger)' : pct > 30 ? 'var(--warn)' : 'var(--ok)';
+  return `<div class="risk-bar-wrap">
+    <div class="risk-bar"><div class="risk-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+    <span style="font-size:.8rem;color:var(--muted);min-width:34px">${pct}%</span>
+  </div>`;
+}
+
+function truncate(s, n) { return s && s.length > n ? s.slice(0, n) + '...' : (s || '-'); }
+function ts(t) { return t ? new Date(t).toLocaleString() : '-'; }
+
+// ─── Overview ─────────────────────────────────────────────────────────────────
+async function loadOverview() {
+  try {
+    const [summary, detections] = await Promise.all([
+      api('/dashboard/summary').catch(() => ({})),
+      api('/detections?limit=8').catch(() => ({ detections: [] })),
+    ]);
+    document.getElementById('stat-sessions').textContent   = summary.active_sessions ?? '-';
+    document.getElementById('stat-detections').textContent = summary.detections_24h  ?? '-';
+    document.getElementById('stat-approvals').textContent  = summary.pending_approvals ?? '-';
+    document.getElementById('stat-servers').textContent    = summary.server_count ?? '-';
+    renderDetectionsTable('recent-detections-wrap', detections.detections || []);
+  } catch(e) { toast('Failed to load overview: ' + e.message, true); }
+}
+
+// ─── Sessions ─────────────────────────────────────────────────────────────────
+async function loadSessions() {
+  const wrap = document.getElementById('sessions-table-wrap');
+  wrap.innerHTML = '<div class="empty"><span class="spinner"></span></div>';
+  try {
+    const data = await api('/sessions?limit=50');
+    const sessions = data.sessions || [];
+    const q = document.getElementById('session-search').value.toLowerCase();
+    const filtered = q ? sessions.filter(s =>
+      (s.agent_id||'').toLowerCase().includes(q) ||
+      (s.server_id||'').toLowerCase().includes(q) ||
+      (s.id||'').toLowerCase().includes(q)
+    ) : sessions;
+    if (!filtered.length) { wrap.innerHTML = '<div class="empty">No sessions found.</div>'; return; }
+    wrap.innerHTML = `<table>
+      <thead><tr><th>Session ID</th><th>Agent</th><th>Server</th><th>State</th><th>Started</th></tr></thead>
+      <tbody>${filtered.map(s => `<tr>
+        <td style="font-family:monospace;font-size:.8rem">${truncate(s.id, 20)}</td>
+        <td>${truncate(s.agent_id, 24)}</td>
+        <td>${truncate(s.server_id, 24)}</td>
+        <td>${stateBadge(s.state)}</td>
+        <td style="color:var(--muted)">${ts(s.started_at || s.created_at)}</td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+  } catch(e) { wrap.innerHTML = '<div class="empty">Failed to load sessions.</div>'; toast(e.message, true); }
+}
+document.getElementById('session-search').addEventListener('input', loadSessions);
+
+// ─── Detections ───────────────────────────────────────────────────────────────
+function renderDetectionsTable(wrapId, detections) {
+  const wrap = document.getElementById(wrapId);
+  if (!detections.length) { wrap.innerHTML = '<div class="empty">No detections.</div>'; return; }
+  wrap.innerHTML = `<table>
+    <thead><tr><th>Time</th><th>Session</th><th>Severity</th><th>Engine</th><th>Message</th></tr></thead>
+    <tbody>${detections.map(d => `<tr>
+      <td style="color:var(--muted);white-space:nowrap">${ts(d.detected_at || d.created_at)}</td>
+      <td style="font-family:monospace;font-size:.78rem">${truncate(d.session_id, 18)}</td>
+      <td>${severityBadge(d.severity)}</td>
+      <td style="color:var(--muted)">${d.engine || '-'}</td>
+      <td>${truncate(d.message || d.reason, 80)}</td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+async function loadDetections() {
+  const wrap = document.getElementById('detections-table-wrap');
+  wrap.innerHTML = '<div class="empty"><span class="spinner"></span></div>';
+  try {
+    const data = await api('/detections?limit=100');
+    const all = data.detections || [];
+    const q = document.getElementById('detection-search').value.toLowerCase();
+    const filtered = q ? all.filter(d =>
+      JSON.stringify(d).toLowerCase().includes(q)
+    ) : all;
+    renderDetectionsTable('detections-table-wrap', filtered);
+  } catch(e) { wrap.innerHTML = '<div class="empty">Failed to load detections.</div>'; toast(e.message, true); }
+}
+document.getElementById('detection-search').addEventListener('input', loadDetections);
+
+// ─── Approvals ────────────────────────────────────────────────────────────────
+async function loadApprovals() {
+  const wrap = document.getElementById('approvals-table-wrap');
+  wrap.innerHTML = '<div class="empty"><span class="spinner"></span></div>';
+  try {
+    const data = await api('/approvals?limit=50');
+    const approvals = data.approvals || [];
+    if (!approvals.length) { wrap.innerHTML = '<div class="empty">No pending approvals.</div>'; return; }
+    wrap.innerHTML = `<table>
+      <thead><tr><th>ID</th><th>Session</th><th>Tool</th><th>Status</th><th>Created</th></tr></thead>
+      <tbody>${approvals.map(a => `<tr>
+        <td style="font-family:monospace;font-size:.78rem">${truncate(a.id, 18)}</td>
+        <td style="font-family:monospace;font-size:.78rem">${truncate(a.session_id, 18)}</td>
+        <td>${a.tool_name || '-'}</td>
+        <td>${stateBadge(a.status)}</td>
+        <td style="color:var(--muted)">${ts(a.created_at)}</td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+  } catch(e) { wrap.innerHTML = '<div class="empty">Failed to load approvals.</div>'; toast(e.message, true); }
+}
+
+// ─── Session Graph ────────────────────────────────────────────────────────────
+async function loadSessionGraph() {
+  const sid = document.getElementById('graph-session-id').value.trim();
+  if (!sid) { toast('Enter a session ID', true); return; }
+  const svg = document.getElementById('graph-svg');
+  svg.innerHTML = '<text x="50%" y="50%" fill="var(--muted)" text-anchor="middle" dominant-baseline="middle"><tspan class="spinner"></tspan> Loading...</text>';
+  try {
+    const { nodes, edges } = await api('/graph/sessions/' + encodeURIComponent(sid));
+    renderGraph(svg, nodes || [], edges || []);
+  } catch(e) { svg.innerHTML = `<text x="50%" y="50%" fill="var(--danger)" text-anchor="middle" dominant-baseline="middle">${e.message}</text>`; }
+}
+
+const NODE_COLORS = { agent:'#7c6af7', session:'#38bdf8', server:'#22c55e', tool:'#f59e0b', resource:'#f05252' };
+
+function renderGraph(svg, nodes, edges) {
+  if (!nodes.length) {
+    svg.innerHTML = '<text x="50%" y="50%" fill="var(--muted)" text-anchor="middle" dominant-baseline="middle">No graph data for this session.</text>';
+    document.getElementById('graph-legend').innerHTML = '';
+    return;
+  }
+
+  const W = svg.clientWidth || 800, H = 380;
+  // Simple force-directed layout approximation: place nodes in a circle
+  const r = Math.min(W, H) * 0.35;
+  const cx = W / 2, cy = H / 2;
+  const pos = {};
+  nodes.forEach((n, i) => {
+    const angle = (2 * Math.PI * i) / nodes.length - Math.PI / 2;
+    pos[n.id] = { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
+  });
+
+  let html = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" style="background:var(--surface);border-radius:var(--radius)">`;
+  html += '<defs><marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="var(--muted)"/></marker></defs>';
+
+  // Edges
+  edges.forEach(e => {
+    const s = pos[e.from_id], t = pos[e.to_id];
+    if (!s || !t) return;
+    html += `<line x1="${s.x}" y1="${s.y}" x2="${t.x}" y2="${t.y}" stroke="var(--border)" stroke-width="1.5" marker-end="url(#arr)" opacity=".7"/>`;
+  });
+
+  // Nodes
+  nodes.forEach(n => {
+    const p = pos[n.id];
+    const c = NODE_COLORS[n.kind] || '#6b7280';
+    const label = (n.label || n.id).slice(0, 16);
+    html += `<circle cx="${p.x}" cy="${p.y}" r="22" fill="${c}22" stroke="${c}" stroke-width="2"/>`;
+    html += `<text x="${p.x}" y="${p.y}" fill="${c}" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="600">${n.kind ? n.kind.slice(0,1).toUpperCase() : '?'}</text>`;
+    html += `<text x="${p.x}" y="${p.y + 30}" fill="var(--text2)" text-anchor="middle" font-size="10">${escXml(label)}</text>`;
+  });
+
+  html += '</svg>';
+  svg.outerHTML = html; // replace svg element
+
+  // Legend
+  const seen = [...new Set(nodes.map(n => n.kind).filter(Boolean))];
+  document.getElementById('graph-legend').innerHTML = seen.map(k =>
+    `<span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:50%;background:${NODE_COLORS[k]||'#6b7280'}"></span>${k}</span>`
+  ).join('');
+}
+
+function escXml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ─── Agent Analysis ───────────────────────────────────────────────────────────
+async function analyzeAgent() {
+  const aid = document.getElementById('agent-id-input').value.trim();
+  if (!aid) { toast('Enter an agent ID', true); return; }
+  const wrap = document.getElementById('agent-result');
+  wrap.innerHTML = '<div class="empty"><span class="spinner"></span></div>';
+  try {
+    const sig = await api('/graph/agents/' + encodeURIComponent(aid) + '/analyze');
+    const risk = Math.round((sig.risk_score || 0) * 100);
+    const riskColor = risk > 60 ? 'var(--danger)' : risk > 30 ? 'var(--warn)' : 'var(--ok)';
+    const paths = (sig.suspicious_paths || []).map(p => `<li style="margin:4px 0;color:var(--warn)">${escXml(p)}</li>`).join('');
+    wrap.innerHTML = `<div class="analyze-panel">
+      <div class="analyze-row"><span class="analyze-key">Agent ID</span><span class="analyze-val" style="font-family:monospace;font-size:.8rem">${escXml(aid)}</span></div>
+      <div class="analyze-row"><span class="analyze-key">Total Sessions</span><span class="analyze-val">${sig.total_sessions ?? '-'}</span></div>
+      <div class="analyze-row"><span class="analyze-key">Distinct Servers</span><span class="analyze-val">${sig.total_servers ?? '-'}</span></div>
+      <div class="analyze-row"><span class="analyze-key">Cumulative Chain Depth</span><span class="analyze-val">${sig.cross_session_chain_depth ?? '-'}</span></div>
+      <div class="analyze-row"><span class="analyze-key">Repeated Lateral Movement</span><span class="analyze-val">${sig.repeated_lateral_movement ? '<span class="badge red">YES</span>' : '<span class="badge green">NO</span>'}</span></div>
+      <div class="analyze-row"><span class="analyze-key">Risk Score</span>
+        <span class="analyze-val" style="color:${riskColor}">${risk}%</span>
+      </div>
+      ${paths ? `<div style="padding:12px 0 4px;font-size:.8rem;color:var(--muted)">Suspicious patterns:</div><ul style="padding-left:18px;font-size:.85rem">${paths}</ul>` : ''}
+    </div>`;
+  } catch(e) { wrap.innerHTML = `<div class="empty">${e.message}</div>`; toast(e.message, true); }
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+loadOverview();
+// Auto-refresh overview every 30s
+setInterval(() => {
+  if (document.querySelector('.nav-item.active[data-page="overview"]')) loadOverview();
+}, 30000);
+</script>
+</body>
+</html>

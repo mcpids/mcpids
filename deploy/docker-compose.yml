@@ -1,0 +1,141 @@
+# MCPIDS Production Docker Compose
+# Services: postgres, redis, otel-collector, control-plane, gateway
+
+services:
+  # ── Infrastructure ────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mcpids
+      POSTGRES_USER: mcpids
+      POSTGRES_PASSWORD: mcpids
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mcpids"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.95.0
+    restart: unless-stopped
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "9464:9464"   # Prometheus scrape
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
+    command: ["--config", "/etc/otelcol/config.yaml"]
+
+  semantic-service:
+    build:
+      context: ..
+      dockerfile: deploy/docker/Dockerfile.semantic-service
+    restart: unless-stopped
+    ports:
+      - "8091:8091"
+    environment:
+      MCPIDS_SEMANTIC_LISTEN_ADDR: ":8091"
+      MCPIDS_SEMANTIC_BACKEND_PROVIDER: "${SEMANTIC_BACKEND_PROVIDER:-stub}"
+      MCPIDS_SEMANTIC_BACKEND_ENDPOINT: "${SEMANTIC_BACKEND_ENDPOINT:-}"
+      MCPIDS_SEMANTIC_BACKEND_BEARER_TOKEN: "${SEMANTIC_BACKEND_BEARER_TOKEN:-}"
+      MCPIDS_SEMANTIC_BACKEND_MODEL: "${SEMANTIC_BACKEND_MODEL:-}"
+      MCPIDS_SEMANTIC_BACKEND_TIMEOUT: "${SEMANTIC_BACKEND_TIMEOUT:-2s}"
+      MCPIDS_SEMANTIC_BACKEND_FALLBACK_TO_STUB: "${SEMANTIC_BACKEND_FALLBACK_TO_STUB:-true}"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8091/healthz | grep ok || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  # ── MCPIDS Services ────────────────────────────────────────────────────────────
+  control-plane:
+    build:
+      context: ..
+      dockerfile: deploy/docker/Dockerfile.control-plane
+    restart: unless-stopped
+    ports:
+      - "8080:8080"   # REST API
+      - "9090:9090"   # gRPC
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      semantic-service:
+        condition: service_healthy
+    environment:
+      MCPIDS_CP_DATABASE_URL: "postgres://mcpids:mcpids@postgres:5432/mcpids?sslmode=disable"
+      MCPIDS_CP_REDIS_URL: "redis://redis:6379"
+      MCPIDS_CP_GRPC_LISTEN_ADDR: ":9090"
+      MCPIDS_CP_HTTP_LISTEN_ADDR: ":8080"
+      MCPIDS_CP_TELEMETRY_OTLP_ENDPOINT: "otel-collector:4317"
+      MCPIDS_CP_SEMANTIC_PROVIDER: "http"
+      MCPIDS_CP_SEMANTIC_ENDPOINT: "http://semantic-service:8091/classify"
+      MCPIDS_CP_SEMANTIC_TIMEOUT: "2s"
+      MCPIDS_CP_SEMANTIC_FALLBACK_TO_STUB: "true"
+      MCPIDS_CP_TELEMETRY_LOG_LEVEL: "info"
+      MCPIDS_CP_TELEMETRY_LOG_FORMAT: "json"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/healthz | grep ok || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  gateway:
+    build:
+      context: ..
+      dockerfile: deploy/docker/Dockerfile.gateway
+    restart: unless-stopped
+    ports:
+      - "8443:8443"
+    depends_on:
+      control-plane:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      semantic-service:
+        condition: service_healthy
+    environment:
+      MCPIDS_GATEWAY_LISTEN_ADDR: ":8443"
+      MCPIDS_GATEWAY_UPSTREAM_URL: "${GATEWAY_UPSTREAM_URL:-http://host.docker.internal:3000}"
+      MCPIDS_GATEWAY_TENANT_ID: "${TENANT_ID:-default-tenant}"
+      MCPIDS_GATEWAY_REDIS_URL: "redis://redis:6379"
+      MCPIDS_GATEWAY_CONTROL_PLANE_ADDRESS: "control-plane:9090"
+      MCPIDS_GATEWAY_CONTROL_PLANE_INSECURE: "true"
+      MCPIDS_GATEWAY_SEMANTIC_PROVIDER: "http"
+      MCPIDS_GATEWAY_SEMANTIC_ENDPOINT: "http://semantic-service:8091/classify"
+      MCPIDS_GATEWAY_SEMANTIC_TIMEOUT: "2s"
+      MCPIDS_GATEWAY_SEMANTIC_FALLBACK_TO_STUB: "true"
+      MCPIDS_GATEWAY_TELEMETRY_OTLP_ENDPOINT: "otel-collector:4317"
+      MCPIDS_GATEWAY_TELEMETRY_LOG_LEVEL: "info"
+      MCPIDS_GATEWAY_TELEMETRY_LOG_FORMAT: "json"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8443/healthz | grep ok || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+volumes:
+  postgres_data:
+  redis_data:

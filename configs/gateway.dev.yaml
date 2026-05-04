@@ -1,0 +1,58 @@
+listen_addr: ":8443"
+upstream_url: "http://localhost:3000"
+tenant_id: "00000000-0000-0000-0000-000000000001"
+agent_id: "00000000-0000-0000-0000-000000000002"
+server_id: "00000000-0000-0000-0000-000000000003"
+max_message_size: 4194304
+
+tls:
+  enabled: false
+  mtls_mode: "disabled"
+
+control_plane:
+  address: "localhost:9090"
+  timeout: 10s
+  insecure: true
+
+database:
+  url: ""
+  max_conns: 10
+  min_conns: 1
+  max_conn_lifetime: 30m
+  max_conn_idle_time: 5m
+
+redis:
+  url: "redis://localhost:6379"
+  pool_size: 10
+  dial_timeout: 5s
+  read_timeout: 3s
+  write_timeout: 3s
+
+pipeline:
+  max_eval_duration: 100ms
+  fail_open: false
+  monitor_only_mode: false
+  semantic_enabled: true
+
+semantic:
+  provider: "stub"
+  endpoint: ""
+  bearer_token: ""
+  model: ""
+  timeout: 2s
+  fallback_to_stub: true
+
+rules:
+  yaml_paths: []
+  reload_interval: 60s
+
+approvals:
+  default_timeout: 5m
+  webhook_url: ""
+  webhook_secret: ""
+
+telemetry:
+  service_name: "mcpids-gateway"
+  prometheus_addr: ":9464"
+  log_level: "info"
+  log_format: "json"

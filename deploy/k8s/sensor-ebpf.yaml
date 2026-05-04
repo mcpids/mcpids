@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: mcpids-sensor-ebpf
+  namespace: mcpids
+spec:
+  selector:
+    matchLabels:
+      app: mcpids-sensor-ebpf
+  template:
+    metadata:
+      labels:
+        app: mcpids-sensor-ebpf
+    spec:
+      hostPID: true
+      containers:
+        - name: sensor-ebpf
+          image: ghcr.io/mcpids/mcpids-sensor-ebpf:latest
+          args:
+            - "--config=/etc/mcpids/sensor.yaml"
+          env:
+            - name: MCPIDS_SENSOR_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: mcpids-runtime-secrets
+                  key: sensor-database-url
+            - name: MCPIDS_SENSOR_CONTROL_PLANE_BEARER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: mcpids-runtime-secrets
+                  key: grpc-client-bearer-token
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              add:
+                - BPF
+                - PERFMON
+                - NET_ADMIN
+          ports:
+            - containerPort: 9467
+          volumeMounts:
+            - name: config
+              mountPath: /etc/mcpids
+            - name: runtime-secrets
+              mountPath: /etc/mcpids/tls
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: mcpids-sensor-config
+        - name: runtime-secrets
+          secret:
+            secretName: mcpids-runtime-secrets

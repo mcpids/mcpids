@@ -1,0 +1,16 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "protocolVersion": "2025-11-25",
+    "capabilities": {
+      "tools": { "listChanged": true },
+      "prompts": { "listChanged": true },
+      "resources": { "listChanged": true }
+    },
+    "serverInfo": {
+      "name": "test-mcp-server",
+      "version": "1.0.0"
+    }
+  }
+}

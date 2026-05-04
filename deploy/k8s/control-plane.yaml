@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcpids-control-plane
+  namespace: mcpids
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcpids-control-plane
+  template:
+    metadata:
+      labels:
+        app: mcpids-control-plane
+    spec:
+      containers:
+        - name: control-plane
+          image: ghcr.io/mcpids/mcpids-control-plane:latest
+          args:
+            - "--config=/etc/mcpids/control-plane.yaml"
+          env:
+            - name: MCPIDS_CP_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: mcpids-runtime-secrets
+                  key: cp-database-url
+            - name: MCPIDS_CP_AUTH_JWKS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: mcpids-runtime-secrets
+                  key: cp-auth-jwks-url
+            - name: MCPIDS_CP_AUTH_ISSUER
+              valueFrom:
+                secretKeyRef:
+                  name: mcpids-runtime-secrets
+                  key: cp-auth-issuer
+            - name: MCPIDS_CP_AUTH_AUDIENCE
+              valueFrom:
+                secretKeyRef:
+                  name: mcpids-runtime-secrets
+                  key: cp-auth-audience
+          ports:
+            - containerPort: 8080
+            - containerPort: 9090
+            - containerPort: 9465
+          volumeMounts:
+            - name: config
+              mountPath: /etc/mcpids
+            - name: runtime-secrets
+              mountPath: /etc/mcpids/tls
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: mcpids-control-plane-config
+        - name: runtime-secrets
+          secret:
+            secretName: mcpids-runtime-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcpids-control-plane
+  namespace: mcpids
+spec:
+  selector:
+    app: mcpids-control-plane
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+    - name: grpc
+      port: 9090
+      targetPort: 9090
+    - name: metrics
+      port: 9465
+      targetPort: 9465

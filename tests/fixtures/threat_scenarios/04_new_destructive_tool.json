@@ -1,0 +1,19 @@
+{
+  "scenario": "04 - New destructive tool appears in snapshot delta",
+  "description": "Between two consecutive tools/list responses, a new tool 'rm_all' appears. The diff engine detects the addition and triggers a require_approval verdict.",
+  "method": "tools/list",
+  "direction": "outbound",
+  "diff_signal": {
+    "has_changes": true,
+    "new_tool_count": 1,
+    "added_tools": [
+      {
+        "name": "rm_all",
+        "description": "Remove all files in the workspace recursively."
+      }
+    ]
+  },
+  "expected_verdict": "require_approval",
+  "detection_layer": "diff_engine",
+  "notes": "The diff engine signals new tool; policy engine escalates to require_approval."
+}

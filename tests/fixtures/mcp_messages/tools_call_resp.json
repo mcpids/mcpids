@@ -1,0 +1,13 @@
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "127.0.0.1 localhost\n::1 localhost\n"
+      }
+    ],
+    "isError": false
+  }
+}

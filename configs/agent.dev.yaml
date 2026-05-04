@@ -1,0 +1,49 @@
+tenant_id: "00000000-0000-0000-0000-000000000001"
+agent_id: "00000000-0000-0000-0000-000000000002"
+agent_name: "dev-agent"
+policy_refresh_interval: 30s
+
+control_plane:
+  address: "localhost:9090"
+  timeout: 10s
+  insecure: true
+
+database:
+  url: ""
+  max_conns: 5
+  min_conns: 1
+  max_conn_lifetime: 30m
+  max_conn_idle_time: 5m
+
+redis:
+  url: "redis://localhost:6379"
+  pool_size: 5
+  dial_timeout: 5s
+  read_timeout: 3s
+  write_timeout: 3s
+
+discovery:
+  config_paths:
+    - "~/.cursor/mcp.json"
+    - "~/.claude.json"
+    - "~/.config/claude/claude_desktop_config.json"
+    - "~/.config/Code/User/settings.json"
+  scan_interval: 30s
+
+wrapper:
+  enabled: true
+  max_processes: 10
+
+semantic:
+  provider: "stub"
+  endpoint: ""
+  bearer_token: ""
+  model: ""
+  timeout: 2s
+  fallback_to_stub: true
+
+telemetry:
+  service_name: "mcpids-agent"
+  prometheus_addr: ":9466"
+  log_level: "info"
+  log_format: "json"

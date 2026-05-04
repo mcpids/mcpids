@@ -1,0 +1,38 @@
+id: prompt-injection-protection
+name: "Prompt Injection Protection"
+description: "Hide or deny tools with injection phrases in their descriptions."
+mode: enforce
+default_decision: allow
+
+rules:
+  - id: hide-injection-tools
+    name: "Hide tools with injection phrases"
+    enabled: true
+    priority: 5
+    scope:
+      methods: [tools/list]
+      directions: [outbound]
+    conditions:
+      - field: "tool.description"
+        op: phrase_match
+        value: suspicious_tool_phrases
+    action:
+      decision: hide
+    severity: high
+    tags: [prompt-injection, tool-poisoning]
+
+  - id: monitor-indirect-injection-in-output
+    name: "Monitor tool outputs for indirect injection"
+    enabled: true
+    priority: 20
+    scope:
+      methods: [tools/call]
+      directions: [outbound]
+    conditions:
+      - field: "result.text"
+        op: phrase_match
+        value: hidden_instruction_phrases
+    action:
+      decision: monitor_only
+    severity: high
+    tags: [indirect-injection, monitoring]

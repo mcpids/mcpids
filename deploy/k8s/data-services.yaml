@@ -1,0 +1,115 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mcpids-postgres-data
+  namespace: mcpids
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcpids-postgres
+  namespace: mcpids
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcpids-postgres
+  template:
+    metadata:
+      labels:
+        app: mcpids-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          env:
+            - name: POSTGRES_DB
+              value: mcpids
+            - name: POSTGRES_USER
+              value: mcpids
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mcpids-runtime-secrets
+                  key: postgres-password
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: mcpids-postgres-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcpids-postgres
+  namespace: mcpids
+spec:
+  selector:
+    app: mcpids-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mcpids-redis-data
+  namespace: mcpids
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcpids-redis
+  namespace: mcpids
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcpids-redis
+  template:
+    metadata:
+      labels:
+        app: mcpids-redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          ports:
+            - containerPort: 6379
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: mcpids-redis-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcpids-redis
+  namespace: mcpids
+spec:
+  selector:
+    app: mcpids-redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379

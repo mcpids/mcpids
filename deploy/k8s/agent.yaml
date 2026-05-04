@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcpids-agent
+  namespace: mcpids
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcpids-agent
+  template:
+    metadata:
+      labels:
+        app: mcpids-agent
+    spec:
+      containers:
+        - name: agent
+          image: ghcr.io/mcpids/mcpids-agent:latest
+          args:
+            - "--config=/etc/mcpids/agent.yaml"
+          env:
+            - name: MCPIDS_AGENT_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: mcpids-runtime-secrets
+                  key: agent-database-url
+            - name: MCPIDS_AGENT_CONTROL_PLANE_BEARER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: mcpids-runtime-secrets
+                  key: grpc-client-bearer-token
+          ports:
+            - containerPort: 9466
+          volumeMounts:
+            - name: config
+              mountPath: /etc/mcpids
+            - name: runtime-secrets
+              mountPath: /etc/mcpids/tls
+              readOnly: true
+            - name: home
+              mountPath: /home/nonroot
+      volumes:
+        - name: config
+          configMap:
+            name: mcpids-agent-config
+        - name: runtime-secrets
+          secret:
+            secretName: mcpids-runtime-secrets
+        - name: home
+          emptyDir: {}

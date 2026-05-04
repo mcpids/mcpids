@@ -1,0 +1,36 @@
+version: "3.9"
+
+# MCPIDS Development overrides
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  postgres:
+    ports:
+      - "5432:5432"
+
+  redis:
+    ports:
+      - "6379:6379"
+
+  otel-collector:
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "9464:9464"
+
+  control-plane:
+    environment:
+      MCPIDS_CP_TELEMETRY_LOG_LEVEL: "debug"
+      MCPIDS_CP_TELEMETRY_LOG_FORMAT: "text"
+    ports:
+      - "8080:8080"
+      - "9090:9090"
+
+  gateway:
+    environment:
+      MCPIDS_GATEWAY_PIPELINE_FAIL_OPEN: "true"
+      MCPIDS_GATEWAY_PIPELINE_MONITOR_ONLY_MODE: "true"
+      MCPIDS_GATEWAY_TELEMETRY_LOG_LEVEL: "debug"
+      MCPIDS_GATEWAY_TELEMETRY_LOG_FORMAT: "text"
+    ports:
+      - "8443:8443"

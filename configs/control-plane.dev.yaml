@@ -1,0 +1,49 @@
+grpc_listen_addr: ":9090"
+http_listen_addr: ":8080"
+
+database:
+  url: "postgres://mcpids:mcpids@localhost:5432/mcpids?sslmode=disable"
+  max_conns: 20
+  min_conns: 2
+  max_conn_lifetime: 30m
+  max_conn_idle_time: 5m
+
+redis:
+  url: "redis://localhost:6379"
+  pool_size: 20
+  dial_timeout: 5s
+  read_timeout: 3s
+  write_timeout: 3s
+
+tls:
+  enabled: false
+  mtls_mode: "disabled"
+
+auth:
+  jwks_url: ""
+  issuer: ""
+  audience: ""
+  allowed_roles: ["admin", "security"]
+
+rules:
+  yaml_paths: []
+  reload_interval: 60s
+
+approvals:
+  default_timeout: 5m
+  webhook_url: ""
+  webhook_secret: ""
+
+semantic:
+  provider: "stub"
+  endpoint: ""
+  bearer_token: ""
+  model: ""
+  timeout: 2s
+  fallback_to_stub: true
+
+telemetry:
+  service_name: "mcpids-control-plane"
+  prometheus_addr: ":9465"
+  log_level: "info"
+  log_format: "json"

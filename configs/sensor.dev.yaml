@@ -1,0 +1,27 @@
+tenant_id: "00000000-0000-0000-0000-000000000001"
+agent_id: "00000000-0000-0000-0000-000000000002"
+
+control_plane:
+  address: "localhost:9090"
+  timeout: 10s
+  insecure: true
+
+database:
+  url: ""
+  max_conns: 5
+  min_conns: 1
+  max_conn_lifetime: 30m
+  max_conn_idle_time: 5m
+
+ebpf:
+  enabled: false
+  programs_dir: "./deploy/bpf"
+  attach_kprobes: true
+  attach_uprobes: false
+  event_buffer_size: 1024
+
+telemetry:
+  service_name: "mcpids-sensor"
+  prometheus_addr: ":9467"
+  log_level: "info"
+  log_format: "json"

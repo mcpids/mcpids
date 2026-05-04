@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package mcpids.v1;
+
+option go_package = "github.com/mcpids/mcpids/pkg/proto/gen/mcpids/v1;mcpidsv1";
+
+// Decision is the enforcement action for an MCP message.
+enum Decision {
+  DECISION_UNSPECIFIED = 0;
+  DECISION_ALLOW = 1;
+  DECISION_DENY = 2;
+  DECISION_HIDE = 3;
+  DECISION_REDACT = 4;
+  DECISION_QUARANTINE = 5;
+  DECISION_REQUIRE_APPROVAL = 6;
+  DECISION_MONITOR_ONLY = 7;
+}
+
+// Severity indicates the detection severity level.
+enum Severity {
+  SEVERITY_UNSPECIFIED = 0;
+  SEVERITY_INFO = 1;
+  SEVERITY_LOW = 2;
+  SEVERITY_MEDIUM = 3;
+  SEVERITY_HIGH = 4;
+  SEVERITY_CRITICAL = 5;
+}
+
+// Redaction describes a single field scrub to apply in a response.
+message Redaction {
+  string field_path = 1;
+  string pattern = 2;
+  string replacement = 3;
+}
+
+// Verdict is the authoritative policy decision for a single MCP message.
+message Verdict {
+  Decision decision = 1;
+  Severity severity = 2;
+  repeated string reasons = 3;
+  repeated string matched_rules = 4;
+  repeated string semantic_labels = 5;
+  double confidence = 6;
+  bool requires_approval = 7;
+  repeated Redaction redactions = 8;
+  bool incident_candidate = 9;
+  repeated string evidence_refs = 10;
+  double risk_score = 11;
+}

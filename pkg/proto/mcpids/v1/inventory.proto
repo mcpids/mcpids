@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package mcpids.v1;
+
+option go_package = "github.com/mcpids/mcpids/pkg/proto/gen/mcpids/v1;mcpidsv1";
+
+// InventoryService receives MCP server inventory reports from gateways and agents
+// and responds with tool snapshot acknowledgements.
+service InventoryService {
+  // ReportInventory submits the current set of discovered MCP servers and their tools.
+  // Called by agents on startup and when the local MCP config changes.
+  rpc ReportInventory(InventoryReport) returns (InventoryAck);
+
+  // SubmitToolSnapshot submits a full snapshot of all tools for a server.
+  // Called by the gateway after a tools/list response is intercepted.
+  rpc SubmitToolSnapshot(ToolSnapshotRequest) returns (ToolSnapshotAck);
+
+  // GetServerTools returns the current known tool list for a server.
+  rpc GetServerTools(GetServerToolsRequest) returns (GetServerToolsResponse);
+}
+
+message InventoryReport {
+  string tenant_id = 1;
+  string agent_id = 2;
+  repeated DiscoveredServer servers = 3;
+  int64 reported_at = 4; // unix millis
+}
+
+message DiscoveredServer {
+  string name = 1;
+  string transport = 2; // http | stdio | sse
+  string url = 3;       // empty for stdio
+  // command is the exec command for stdio servers (e.g. ["npx", "my-mcp-server"])
+  repeated string command = 4;
+  map<string, string> metadata = 5;
+}
+
+message InventoryAck {
+  // server_ids maps discovered server name → assigned internal UUID.
+  map<string, string> server_ids = 1;
+}
+
+message ToolSnapshotRequest {
+  string tenant_id = 1;
+  string server_id = 2;
+  string session_id = 3;
+  // tools_json is a JSON-encoded []mcp.Tool slice.
+  bytes tools_json = 4;
+  int64 captured_at = 5; // unix millis
+}
+
+message ToolSnapshotAck {
+  string snapshot_id = 1;
+  bool has_changes = 2;
+  // change_summary is a short human-readable description of detected changes.
+  string change_summary = 3;
+}
+
+message GetServerToolsRequest {
+  string tenant_id = 1;
+  string server_id = 2;
+}
+
+message GetServerToolsResponse {
+  // tools_json is a JSON-encoded []mcp.Tool slice (current snapshot).
+  bytes tools_json = 1;
+  string snapshot_id = 2;
+  int64 snapshot_at = 3;
+}

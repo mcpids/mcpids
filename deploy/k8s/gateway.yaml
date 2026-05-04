@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcpids-gateway
+  namespace: mcpids
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcpids-gateway
+  template:
+    metadata:
+      labels:
+        app: mcpids-gateway
+    spec:
+      containers:
+        - name: gateway
+          image: ghcr.io/mcpids/mcpids-gateway:latest
+          args:
+            - "--config=/etc/mcpids/gateway.yaml"
+          env:
+            - name: MCPIDS_GATEWAY_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: mcpids-runtime-secrets
+                  key: gateway-database-url
+            - name: MCPIDS_GATEWAY_CONTROL_PLANE_BEARER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: mcpids-runtime-secrets
+                  key: grpc-client-bearer-token
+          ports:
+            - containerPort: 8443
+            - containerPort: 9464
+          volumeMounts:
+            - name: config
+              mountPath: /etc/mcpids
+            - name: runtime-secrets
+              mountPath: /etc/mcpids/tls
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: mcpids-gateway-config
+        - name: runtime-secrets
+          secret:
+            secretName: mcpids-runtime-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcpids-gateway
+  namespace: mcpids
+spec:
+  selector:
+    app: mcpids-gateway
+  ports:
+    - name: http
+      port: 8443
+      targetPort: 8443
+    - name: metrics
+      port: 9464
+      targetPort: 9464

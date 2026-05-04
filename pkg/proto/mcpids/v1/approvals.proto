@@ -1,0 +1,102 @@
+syntax = "proto3";
+
+package mcpids.v1;
+
+option go_package = "github.com/mcpids/mcpids/pkg/proto/gen/mcpids/v1;mcpidsv1";
+
+import "mcpids/v1/verdict.proto";
+
+// ApprovalService manages the HITL (human-in-the-loop) approval workflow.
+// When the gateway needs human confirmation before forwarding an MCP message,
+// it calls SubmitApproval and then WatchDecision to receive the outcome.
+service ApprovalService {
+  // SubmitApproval creates a new pending approval request.
+  rpc SubmitApproval(SubmitApprovalRequest) returns (SubmitApprovalResponse);
+
+  // WatchDecision opens a server-streaming RPC that completes when a decision
+  // is made for the given request_id. The gateway blocks on this stream.
+  rpc WatchDecision(WatchDecisionRequest) returns (stream ApprovalDecision);
+
+  // Decide records a human approval or denial. Called by the admin API.
+  rpc Decide(DecideRequest) returns (DecideResponse);
+
+  // ListPending returns all pending approval requests for a tenant.
+  rpc ListPending(ListPendingRequest) returns (ListPendingResponse);
+}
+
+enum ApprovalStatus {
+  APPROVAL_STATUS_UNSPECIFIED = 0;
+  APPROVAL_STATUS_PENDING = 1;
+  APPROVAL_STATUS_APPROVED = 2;
+  APPROVAL_STATUS_DENIED = 3;
+  APPROVAL_STATUS_EXPIRED = 4;
+}
+
+message SubmitApprovalRequest {
+  string tenant_id = 1;
+  string agent_id = 2;
+  string session_id = 3;
+  string server_id = 4;
+  string tool_name = 5;
+  // raw_payload is the original MCP JSON-RPC message bytes being held.
+  bytes raw_payload = 6;
+  // verdict is the verdict that triggered the approval requirement.
+  Verdict verdict = 7;
+  // timeout_seconds is how long to wait before auto-expiring (default 300).
+  int32 timeout_seconds = 8;
+}
+
+message SubmitApprovalResponse {
+  string request_id = 1;
+  int64 expires_at = 2; // unix millis
+}
+
+message WatchDecisionRequest {
+  string request_id = 1;
+  string tenant_id = 2;
+}
+
+message ApprovalDecision {
+  string request_id = 1;
+  ApprovalStatus status = 2;
+  string decided_by = 3;
+  string notes = 4;
+  int64 decided_at = 5; // unix millis
+}
+
+message DecideRequest {
+  string request_id = 1;
+  string tenant_id = 2;
+  // approver_user_id is the authenticated admin user making the decision.
+  string approver_user_id = 3;
+  ApprovalStatus decision = 4; // must be APPROVED or DENIED
+  string notes = 5;
+}
+
+message DecideResponse {
+  string request_id = 1;
+  ApprovalStatus status = 2;
+}
+
+message ListPendingRequest {
+  string tenant_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message ListPendingResponse {
+  repeated PendingApproval items = 1;
+  int32 total = 2;
+}
+
+message PendingApproval {
+  string request_id = 1;
+  string tenant_id = 2;
+  string session_id = 3;
+  string server_id = 4;
+  string tool_name = 5;
+  Verdict verdict = 6;
+  int64 created_at = 7;
+  int64 expires_at = 8;
+  ApprovalStatus status = 9;
+}

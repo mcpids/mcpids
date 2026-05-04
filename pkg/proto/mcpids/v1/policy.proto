@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package mcpids.v1;
+
+option go_package = "github.com/mcpids/mcpids/pkg/proto/gen/mcpids/v1;mcpidsv1";
+
+import "mcpids/v1/verdict.proto";
+
+// PolicyService provides policy lookup and streaming updates for gateways and agents.
+// Gateways subscribe to StreamPolicyUpdates to receive real-time policy changes
+// without polling.
+service PolicyService {
+  // GetPolicy returns the current effective policy for a tenant.
+  rpc GetPolicy(GetPolicyRequest) returns (GetPolicyResponse);
+
+  // StreamPolicyUpdates streams policy changes as they are committed.
+  // The stream sends an initial snapshot followed by incremental updates.
+  rpc StreamPolicyUpdates(StreamPolicyUpdatesRequest) returns (stream PolicyUpdate);
+}
+
+message GetPolicyRequest {
+  string tenant_id = 1;
+}
+
+message GetPolicyResponse {
+  PolicySnapshot snapshot = 1;
+}
+
+message StreamPolicyUpdatesRequest {
+  string tenant_id = 1;
+  // agent_id identifies the subscriber for logging purposes.
+  string agent_id = 2;
+}
+
+message PolicyUpdate {
+  string tenant_id = 1;
+  // full_snapshot is set on initial delivery and after a major rebuild.
+  PolicySnapshot full_snapshot = 2;
+  // incremental_change is set for single-rule add/update/delete events.
+  PolicyChange incremental_change = 3;
+  int64 sequence = 4;
+}
+
+message PolicyChange {
+  enum ChangeKind {
+    CHANGE_KIND_UNSPECIFIED = 0;
+    CHANGE_KIND_RULE_ADDED = 1;
+    CHANGE_KIND_RULE_UPDATED = 2;
+    CHANGE_KIND_RULE_DELETED = 3;
+    CHANGE_KIND_POLICY_UPDATED = 4;
+  }
+  ChangeKind kind = 1;
+  string rule_id = 2;
+  bytes rule_json = 3;
+}
+
+// PolicySnapshot is the full effective policy for a tenant, serialized as JSON.
+// Gateways deserialize this into their in-memory rule set on startup and after
+// receiving a full_snapshot update.
+message PolicySnapshot {
+  string tenant_id = 1;
+  int64 version = 2;
+  // policies_json is the JSON-encoded slice of Policy objects.
+  bytes policies_json = 3;
+  // rules_json is the JSON-encoded slice of Rule objects (flattened, priority-sorted).
+  bytes rules_json = 4;
+}

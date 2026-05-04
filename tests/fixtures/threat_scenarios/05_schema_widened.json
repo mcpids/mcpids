@@ -1,0 +1,21 @@
+{
+  "scenario": "05 - Tool input schema widened between snapshots",
+  "description": "The 'read_file' tool previously had additionalProperties:false and required:[path]. Now additionalProperties:true and required:[] - the schema is widened, allowing arbitrary input.",
+  "method": "tools/list",
+  "direction": "outbound",
+  "diff_signal": {
+    "has_changes": true,
+    "modified_tools": [
+      {
+        "name": "read_file",
+        "schema_changed": true,
+        "schema_widened": true,
+        "old_schema": {"type":"object","required":["path"],"additionalProperties":false},
+        "new_schema": {"type":"object","required":[],"additionalProperties":true}
+      }
+    ],
+    "widened_schemas": 1
+  },
+  "expected_verdict": "require_approval",
+  "detection_layer": "diff_engine"
+}
